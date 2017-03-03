@@ -183,3 +183,4 @@ pip-selfcheck.json
 # End of https://www.gitignore.io/api/python,virtualenv,emacs,osx
 
 beers.csv
+wrangled_beers.csv

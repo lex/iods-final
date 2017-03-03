@@ -16,7 +16,8 @@ breweries_by_country_urls = [
     'https://www.ratebeer.com/breweries/finland/0/71/',
     'https://www.ratebeer.com/breweries/estonia/0/67/',
     'https://www.ratebeer.com/breweries/czech-republic/0/56/',
-    'https://www.ratebeer.com/breweries/sweden/0/190/'
+    'https://www.ratebeer.com/breweries/belgium/0/23/',
+    'https://www.ratebeer.com/breweries/scotland/0/241/',
 ]
 
 
