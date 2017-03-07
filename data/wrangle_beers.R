@@ -1,3 +1,8 @@
+# Atte Keltanen
+# atke@cs.helsinki.fi
+# 2017/03/03
+# Data wrangling of beer data for multiple correspondence analysis
+
 library(dplyr)
 
 beers <- read.csv("beers.csv", sep=";", header=T, quote="\"", row.names = NULL)

@@ -1,0 +1,134 @@
+---
+title: "IODS final assignment"
+author: 
+- name: "Atte Keltanen"
+  email: "atke@cs.helsinki.fi"
+date: "`r format(Sys.time(), '%Y/%m/%d')`"
+output:
+  html_document:
+    theme: united
+    toc: true
+    toc_depth: 2
+    fig_caption: true
+    fig_width: 10
+    fig_height: 10
+    code_folding: hide
+---
+
+## Disclaimer
+
+The data I will be using consists of beers and their statistics. The data was acquired on 2017/03/03 from an excellent beer rating site called [Ratebeer](https://www.ratebeer.com) using the scraper I wrote. I do not claim to own the data, and neither will I share it here. Anyone interested in it can scrape it themselves using the supplied scraper. The data will be used for, and only for, educational purposes.
+
+## Introduction
+
+I've always wondered what makes a good beer. Is it the style? The strength? The country it's coming from? Or is it just the taste of it? One could probably guess it's mainly the taste of it, but this course and its final project gives an excellent chance to determine if there is correlation between good ratings, beer styles and such.
+
+## The data
+
+```{r, echo=FALSE, message=FALSE}
+library(MASS)
+library(GGally)
+library(dplyr)
+library(tidyr)
+library(corrplot)
+library(ggplot2)
+library(FactoMineR)
+library("devtools")
+install_github("kassambara/factoextra")
+library("factoextra")
+library(plotly)
+
+# set seed for the sake of reproducibility
+set.seed(2017)
+```
+
+```{r}
+beers <- read.csv("data/wrangled_beers.csv", header=T, quote="\"", row.names = 1)
+
+summary(beers)
+```
+
+The interesting variables consist of beer style, different scores, the amount of ratings, calories, alcohol content and whether the beer is seasonal or not.
+
+The beers were selected by selecting breweries from some countries which had at least 80 beers in their selection. That makes smaller and mid sized breweries not to be present in the data. There had to be some line, or else there would've been a gigantic volume of data.
+
+The numeric variables were standardized and categorized for further use.
+
+You can check out the data wrangling script from [here](https://github.com/lex/iods-final/blob/master/data/wrangle_beers.R) and the scraper from [here](https://github.com/lex/iods-final/tree/master/ratebeer-scraper).
+
+For the analysis we're going to drop breweries and beer styles, since they make the plot unreadable and weighted average scores since they're pretty much the same as standardized scores.
+
+```{r, warning=FALSE, fig.width=10, fig.height=10}
+custom_beers <- dplyr::select(beers, -c(brewery, weighted_avg_score, style))
+
+p <- gather(custom_beers) %>% ggplot(aes(value)) + facet_wrap("key", scales = "free") + geom_bar(fill = "#dd4814") + theme(axis.text.x = element_text(angle = 45, hjust = 1, size = 8))
+ggplotly(p)
+```
+
+## MCA
+
+```{r, warning=FALSE, fig.width=10, fig.height=10}
+# multiple correspondence analysis
+mca <- MCA(custom_beers, graph = FALSE)
+# summary of the model
+summary(mca)
+
+cats = apply(custom_beers, 2, function(x) nlevels(as.factor(x)))
+
+# data frames for ggplot
+mca1_vars_df = data.frame(mca$var$coord, Variable = rep(names(cats), 
+    cats))
+mca1_obs_df = data.frame(mca$ind$coord)
+
+ggplot(data = mca1_obs_df, aes(x = Dim.1, y = Dim.2)) + geom_hline(yintercept = 0, 
+    colour = "gray70") + geom_vline(xintercept = 0, colour = "gray70") + geom_point(colour = "gray50", 
+    alpha = 0.7) + geom_density2d(colour = "gray80") + geom_text(data = mca1_vars_df, 
+    aes(x = Dim.1, y = Dim.2, label = rownames(mca1_vars_df), colour = Variable)) + 
+    ggtitle("MCA") + scale_colour_discrete(name = "Variable")
+```
+
+The goal was to find out what contributes to a high score. As you can (hopefully) see from the plot, the surroundings of score_high is pretty deserted at the top left part. High rating count seems to be the nearest point to it.
+
+Series beers seem to get high style scores.
+
+Alcohol content and calories are exactly on top of each other, but that shouldn't be that surprising.
+
+Finland seems to be pretty close to low scores.
+
+The dots in the plot are the individual beers. The dots don't seem to align that much with the variables, and there's a huge clump in the top right corner with no variables in sight.
+
+I was also interested in how only beer styles compare to points:
+
+```{r, warning=FALSE, echo=FALSE, fig.width=10, fig.height=10}
+custom_beers <- dplyr::select(beers, c(style, score))
+style_mca <- MCA(custom_beers, graph = FALSE)
+plot(style_mca, invisible = c("ind"), habillage = "quali")
+```
+
+The percentages are pretty low, but the plot is still fun to look at. Looks like the styles near the high score point are the more unconventional beer styles.
+
+## Diagnostic stuff
+
+```{r, warning=FALSE, fig.width=10, fig.height=5}
+var <- get_mca_var(mca)
+fviz_contrib(mca, choice = "var", axes = 1)
+fviz_contrib(mca, choice = "var", axes = 2)
+```
+
+The dashed red line is the expected average contribution to the dimension. Any variable over it is considered important.
+
+Seems like both the dimensions consist mainly of alcohol content and calories.
+
+```{r, warning=FALSE, fig.width=10, fig.height=5}
+fviz_screeplot(mca)
+```
+
+Two dimension seems to be the best in this case, and that's what we had.
+
+## Summary
+
+It looks like the question of good beer still remains unanswered. The plots didn't reveal much, except the beer style plot had something of value.
+
+I think there is a bit too much observations in my data, which creates so much variation that MCA can't really work with it. There could've been better results with a smaller data set, but that could've simplified the results too. It could be interesting to see how having more countries would affect the results, for example having some American or Australian beers as well. Price could be an interesting variable too.
+
+One explanation could be that it's all just a matter of taste, and has nothing to do with the data available here.
